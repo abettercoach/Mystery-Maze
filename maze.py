@@ -206,20 +206,30 @@ class Game:
     Contrains logic for displaying instructions, handling user input,
     and displaying the current state of the maze."""
     def __init__(self, stdscr):
-        self.terminal = stdscr #urses module object that corresponds to terminal screen
+        
+        # Curses setup
+        curses.curs_set(0)
+        self.screen = stdscr # curses module object that corresponds to terminal screen
+        
+        # Where to draw maze on the terminal (below script lines)
+        self.__maze_screen_coords = (10,8)
 
     def start(self):
+        """Starts a new game with a fresh maze"""
         self.maze = Mystery_Maze(13,7)
         self.player_position = self.maze.entrance.coords
-        self.__display_maze_position = (10,6)
+        self.player_start_time = time.time() 
+        self.play_time = 0
+
+        self.screen.clear()
 
         self.__play_intro()
         self.__game_loop()
 
-    def take_turn(self, direction):
+    def make_move(self, direction):
         """
         Reveals the tile under mark_coords.
-        Returns true if the turn was succesful, false otherwise.
+        Returns true if the move was succesful, false otherwise.
         """
 
         # Calculate coordinates for step from direction
@@ -253,41 +263,60 @@ class Game:
         return (is_success, next_position)
 
     def __play_intro(self):
-        line0, line1, line2, line3 = Line(), Line(), Line(), Line()
+        line0, line1, line2 = Line(), Line(), Line()
         line0.script = """You have entered the Mystery Maze... Welcome.\n...A shroud of fog engulfs you..."""
         line0.prompt = """(Press any key to continue)"""
-        line1.script = """Use the arrow keys to find your way to the exit.\n\nYou may step into a clearing. A path forward? A dead end?\nOr... you may step into a wall!"""
+        line1.script = """As you move, you may step into a clearing. A path forward? A dead end?\nOr... you may step into a wall!"""
         line1.prompt = """(Press any key to continue)"""
-        line2.script = """With every move you map out the mystery."""
-        line2.prompt = """(Press any key to continue)"""
-        line3.script = """With every move you step towards success."""
-        line3.prompt = """(Press any key to begin)"""
+        line2.script = """With every move you map out the mystery.
 
-        intro = [line0,line1,line2,line3]
+With every move you step towards success."""
+        line2.prompt = """(Press any key to begin)"""
+
+        intro = [line0,line1,line2]
         for line in intro:
             self.__display_line(line)
 
             # Wait for input of any character before next intro line
-            self.terminal.getch()
+            self.screen.nodelay(False)
+            self.screen.getch()
     
     def __display_line(self, line):
         """Display text one letter at a time"""
-        self.terminal.clear() #Clear terminal for every line
+        
+        # Clear only the script area (first 5 lines)
+        for y in range(6):
+            self.screen.move(y, 0)
+            self.screen.clrtoeol()
+        
+        # Position cursor at top
+        self.screen.move(0, 0)
 
-        # Print one character at a time of the script 
-        # for typing effect
+        # Print one character at a time of the script for typing effect. 
+        # If we receive any keystroke during line rendering, skip the typing effect
+        # and render whole script in one go.
+        self.screen.nodelay(True)
+        skip_type_effect = False
         for char in line.script:
-            self.terminal.addstr(char)
-            self.terminal.refresh()
-            if char == "\n":
-                time.sleep(1.5)
+            # Render the type effect as long as there has been no new user input
+            # during the current loop or from a previous loop
+            keystroke = self.screen.getch()
+            skip_type_effect = skip_type_effect or keystroke != curses.ERR #and not has_type_effect
+
+            self.screen.addstr(char)
+            self.screen.refresh()
+            if skip_type_effect:
+                time.sleep(0.005)
+            elif char == "\n":
+                time.sleep(0.75)
             else:
-                time.sleep(0.1)
+                time.sleep(0.05)
         
         # Print prompt with different style
         if line.prompt:
-            time.sleep(0.5)
-            self.terminal.addstr("\n\n"+line.prompt, curses.A_ITALIC)
+            if not skip_type_effect:
+                time.sleep(0.2)
+            self.screen.addstr("\n\n"+line.prompt, curses.A_ITALIC)
 
     def __display_tile(self, coords, tile):
 
@@ -305,12 +334,12 @@ class Game:
         else:
             tile_char = " "
         
-        self.terminal.addstr(y,x, tile_char, curses.color_pair(1))
+        self.screen.addstr(y,x, tile_char, curses.color_pair(1))
 
     def __display_maze(self):
         """Displays the current state of the game."""
 
-        (maze_top_x, maze_top_y) = self.__display_maze_position
+        (maze_top_x, maze_top_y) = self.__maze_screen_coords
 
         for y in range(self.maze.height):
             for x in range(self.maze.width):
@@ -321,15 +350,14 @@ class Game:
 
                 self.__display_tile((display_x, display_y), tile)
 
-            self.terminal.addstr("\n") #newline after each row
+            self.screen.addstr("\n") #newline after each row
 
-        self.terminal.addstr("\n") #newline after entire grid
-        self.terminal.refresh()
+        self.screen.addstr("\n") #newline after entire grid
 
     def __display_user(self):
         """Displays the current state of the user."""
 
-        (maze_top_x, maze_top_y) = self.__display_maze_position
+        (maze_top_x, maze_top_y) = self.__maze_screen_coords
         (user_x, user_y) = self.player_position
 
         curses.start_color()
@@ -340,12 +368,12 @@ class Game:
         (x,y) = (maze_top_x + user_x, maze_top_y + user_y)
         user_char = "¤"
         
-        self.terminal.addstr(y,x, user_char, curses.color_pair(2) | curses.A_BOLD)
+        self.screen.addstr(y,x, user_char, curses.color_pair(2) | curses.A_BOLD)
 
     def __display_turn(self, direction, success):
         """Displays the last move."""
 
-        (maze_top_x, maze_top_y) = self.__display_maze_position
+        (maze_top_x, maze_top_y) = self.__maze_screen_coords
         (user_x, user_y) = self.player_position
         
         if direction == Direction.NORTH:
@@ -369,9 +397,37 @@ class Game:
 
         color_pair = curses.color_pair(4) if success else curses.color_pair(3)
         
-        self.terminal.addstr(y,x, user_char, color_pair | curses.A_BOLD)
-        self.terminal.refresh()
-        time.sleep(0.3)
+        self.screen.addstr(y,x, user_char, color_pair | curses.A_BOLD)
+
+    def __display_time_elapsed(self):
+        self.play_time = time.time() - self.player_start_time
+        play_time_str = str(round(self.play_time,2))
+        display_str = f'Seconds: {play_time_str}'
+
+        curses.start_color()
+        curses.use_default_colors()
+        
+        (_, maze_y) = self.__maze_screen_coords
+        x = 0
+        y = maze_y + self.maze.height + 2
+
+        self.screen.addstr(y,x, display_str, 1 | curses.A_BOLD)
+
+    def __display_finish(self):
+        play_time_str = str(round(self.play_time,2))
+
+        turn_line = Line()
+        turn_line.script = f'Congratulations. You made it to the exit in {play_time_str} seconds.'
+        turn_line.prompt = "Press any key to play again."
+
+        self.__display_line(turn_line)
+        self.__display_maze()
+        self.__display_user()
+
+        # Wait for input of any character before next intro line
+        self.screen.nodelay(False)
+        self.screen.getch()
+        self.start()
 
     def __game_loop(self):
         """
@@ -379,15 +435,19 @@ class Game:
         Waits for player turn and updates the game state.
         """
         turn_line = Line()
+        turn_line.script = "You have entered the maze. How long will it take to find your way through?"
         turn_line.prompt = "Use the arrow keys to navigate your way through the shrouded maze."
         self.__display_line(turn_line)
 
-        curses.curs_set(0)
+        self.player_start_time = time.time() # Reset time, so that the count begins only after the intro
+        # self.screen.nodelay(False) # Wait until input every frame at .getch()
         while True:
             self.__display_maze()
             self.__display_user()
+            self.__display_time_elapsed()
+            self.screen.refresh()
 
-            char = self.terminal.getch()
+            char = self.screen.getch()
             if char == curses.KEY_RIGHT: 
                 direction = Direction.EAST
             elif char == curses.KEY_LEFT: 
@@ -396,12 +456,26 @@ class Game:
                 direction = Direction.NORTH
             elif char == curses.KEY_DOWN: 
                 direction = Direction.SOUTH
-            else: pass
+            else:
+                direction = False
             
             if direction:
-                (was_success, new_position) = self.take_turn(direction)
+                (was_success, new_position) = self.make_move(direction)
                 self.__display_turn(direction, was_success)
                 self.player_position = new_position
+
+                # Keep turn displayed for a brief moment before continuing game loop
+                self.screen.refresh()
+                time.sleep(0.3)
+
+            did_win = self.player_position == self.maze.exit.coords
+
+            if did_win:
+                break
+        
+        self.__display_finish()
+
+            
 
 class Line:
     """Lines in the game are made up of a script and a prompt."""
