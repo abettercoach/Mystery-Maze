@@ -1,0 +1,32 @@
+Mystery Maze by iris
+A small project for the Recurse Center application, June 2025
+
+Inspired by an activity described in the book
+"Right Kind of Wrong" by Amy Edmondson
+ 
+# Short Description:
+Small, terminal-based game built on python.
+The goal of the game is for the user to find their way 
+through a maze from entry to exit as quickly as possible. 
+
+# The Game:
+- The maze exists within a grid of tiles.
+- Path tiles are part of the maze.
+- Wall tiles are not.
+- There is an Entry tile and an Exit tile.
+- Except for the Entry, all tiles are at first shrouded, 
+  and the user must step on a tile before revealing if
+  it's a path tile or wall tile.
+- The user can only step on tiles neighboring already 
+  revealed path tiles. 
+- The user takes steps using the arrow keys.
+- Stepping on a path tile is a success.
+- Stepping on a wall tile is a failure.
+- Some path tiles lead to dead ends.
+- The game is over and the user wins when they
+  reveal the Exit tile.
+
+There is no losing, only taking longer.
+
+# The Code:
+

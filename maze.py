@@ -1,91 +1,66 @@
-# Maze by iris
-# For Recurse Center Application, June 2025
-#
-# Inspired by an activity described in the book
-# "Right Kind of Wrong" by Amy Edmondson
-# 
-# Small, terminal-based game. 
-# The goal of the game is for the user to find their way 
-# through a maze from entry to exit as quickly as possible. 
-# 
-# - The maze exists within a grid of tiles.
-# - Path tiles are part of the maze.
-# - Wall tiles are not.
-# - There is an Entry tile and an Exit tile.
-# - Except for the Entry, all tiles at first obscured, 
-#   and the user must step on a tile before revealing if
-#   it's a path tile or wall tile.
-# - The user can only step on tiles adjacent to already 
-#   revealed path tiles. 
-# - The user takes steps using the WASD keys.
-# - Stepping on a path tile is a success.
-# - Stepping on a wall tile is a failure.
-# - Some path tiles lead to dead ends.
-# - The game is over and the user wins when they
-#   reveal the Exit tile.
-#
-# There is no losing, only taking longer.
-
-# Pseudo-Structure
-# I'll need...
-# (0) An intro prompt.
-# (1) To print out the maze. Initially, and after every move.
-# (2) To receive user input after printing out the maze.
-# (3) To process input and update the maze.
-# (4) To identify the win-condition and end the game.
-# 
-# For all of that I'll need.
-# (A) To initialize the grid. Maze, path and barrier tiles, entry, exit.
-# 
-# What I can start with:
-# - A grid made up of all path tiles.
-#
-# TODO: Implement easy interface with curses library
-
 import random
 import time
 from enum import Enum
 
-# The curses library supports pretty terminal display
-# and facilitates reading user input. Hopefully using this
-# library doesn't go against the "no frameworks" rule.
-# If it does, please judge my submission on the merit of
-# my classes.  
 import curses
 from curses import wrapper
 
-def main(stdscr):
-    game = Game(stdscr)
-    game.start()
-
 class Direction(Enum): 
+    """
+    Helper class for the Mystery Maze Game.
+    These cardinal directions are used during maze generation
+    as well as for user movement and gameplay.
+    """
     NORTH = 1
     SOUTH = 2
     WEST = 3
     EAST = 4
 
-class Tile:
+class Maze_Tile:
+    """
+    A Mystery Maze instance will be mainly made up of
+    a grid of Maze_Tile instances with useful attributes.
+    """
     def __init__(self, coords):
+        # While each Mystery_Maze instance will have a grid
+        # mapping coordinates to tiles. It is also helpful to
+        # be able to reference the coordinates from each tile.
         self.coords = coords
 
+        # Tiles are instantiated as walls that are also shrouded.
         self.revealed = False #False when shrouded. True when stepped on.
         self.carved = False #False when wall. True when carved path.
 
-        #For use during maze generation
+        # For use during maze generation.
+        # This attribute will let us know if we have already
+        # visited it during the recursive backtracking algorithm
+        # and decided it it will be part of the path (carved) or not.
         self.visited = False 
 
 class Mystery_Maze:
     """
-    A mystery maze is made up of a grid tiles. 
-    Tiles are either carved (part of the path) or walls.
+    Each game will begin with a freshly generated Mystery Maze instance.
+    A Mystery Maze is made up of a grid tiles. 
+    Tiles are either carved (part of the path) or not (walls).
     Tiles are either revelead (have been stepped on by user) or shrouded.
+
+    This class is not concerned with tracking user's position, 
+    handling their movements, or other game interface concerns. An 
+    instance of Game, however, will be able to access a Maze's grid and 
+    mark Tiles as revealed or not.
     """
 
     def __init__(self, width, height):
-        # Initialize grid for maze
+        """
+        Initialize what we need for a Maze:
+        We generate a maze with recursive backtracking on a 
+        grid of tiles and then add entrance and exit points.
+        """
 
         # Ensure width and height are odd and sufficiently large for 
-        # Recursive Backtracking algorithm to work
+        # the generation algorithm to work.
+        # The outer columns and rows of the grid will always be walls,
+        # except for the entry and exit tiles.
         if (width < 3):
             width = 3
         elif (width % 2 != 1):
@@ -98,54 +73,57 @@ class Mystery_Maze:
             height += 1
         self.height = height
 
-        # Initialize grid data structure 
+        # Initialize the grid data structure 
         # Tiles are initialized as shrouded walls.
         self.grid = {}
         for x in range(width):
             for y in range(height):
-                self.grid[(x,y)] = Tile((x,y))
+                self.grid[(x,y)] = Maze_Tile((x,y))
     
         # Begin recursive maze generation, which carves out a maze
-        # of paths in the the tiles
-        self.visit((1,1))
+        # of paths in the the tiles. 
+        # visit() is a recursive function that only returns after
+        # the algorithm finishes.
+        self.visit((1,1)) 
 
-        # Add entrance and exit to maze.
-        exit_coords = (1,0)
-        entrance_coords = (self.width - 2, self.height - 1)
+        # Add entry and exit to maze.
+        exit_coords = (1,0) # Top left
+        entry_coords = (self.width - 2, self.height - 1) # Bottom right
 
         self.exit = self.grid[exit_coords]
-        self.entrance = self.grid[entrance_coords]
+        self.entry = self.grid[entry_coords]
 
         self.exit.carved = True
         self.exit.revealed = True
 
-        self.entrance.carved = True
-        self.entrance.revealed = True
+        self.entry.carved = True
+        self.entry.revealed = True
     
     def visit(self, coords):
-        """Based off recursive backtracking maze generation
-        algorithm.
+        """
+        Based off recursive backtracking maze generation algorithm.
         
         Reference: https://inventwithpython.com/recursion/chapter11.html
         
-        Carve out a cell as part of the path in the maze at x, y
-        and then recursively move to neighboring unvisited
-        spaces. This function backtracks when the mark has
-        reached a dead end."""
+        Carve out a cell as part of the path in the maze at coords
+        and then recursively move to neighboring unvisited spaces. 
+        This function backtracks whenever the mark has reached a dead end
+        and returns when completed.
+        """
 
-        #Carve out space where there was once a wall
+        # Carve out space at coords where there was once a wall
         current_tile = self.grid[coords]
-        current_tile.carved = True
+        current_tile.carved = True # current_tile is now part of path
         
-        #Mark as visited.
-        current_tile.visited = True
+        # Mark as visited.
+        current_tile.visited = True # won't be visited again by recursion
 
+        # Recursive loop:
         (x,y) = coords
-
         while True:
-            # Check which neighbors not yet visited
-            # For each direction, if not at the edge there is a neighbor.
-            # If there is a neighbor and it hasn't been visited, add to unvisited.
+            # Check which neighbors not yet visited.
+            # For each direction, if current tile is not at the edge it has a neighbor.
+            # If the neighbor hasn't been visited, add to list of unvisited.
             unvisited_neighbors = []
 
             if y > 1 and not self.grid[(x, y - 2)].visited:
@@ -161,12 +139,15 @@ class Mystery_Maze:
                 unvisited_neighbors.append(Direction.EAST)
 
             if len(unvisited_neighbors) == 0:
-                # Base case: If all neighbors visited.
-                # Dead end. Backtrack to an earlier space.
+                # Base case: If all neighbors visited, we're at
+                # a dead end. Backtrack to an earlier space.
+                # This will break completely out of the recursion
+                # once we've visited everything.
                 return
             else:
-                # Recursive case: At least one neighbor we can visit
-                # Randomly pick an unvisited neighbor to be the next tile
+                # Recursive case: At least one neighbor we can visit, so
+                # randomly pick an unvisited neighbor to be the next tile.
+                # We'll also keep track of the hallway between neighbors.
                 
                 next_tile_direction = random.choice(unvisited_neighbors)
 
@@ -183,28 +164,31 @@ class Mystery_Maze:
                     next_tile_coords = (x + 2, y)
                     hallway_coords = (x + 1, y)
                 
-                # Carve out the connection hallway too
+                # Carve out the connection hallway first
                 hallway_tile = self.grid[hallway_coords]
                 hallway_tile.carved = True
 
                 # Visit the next coordinate recursively
+                # (which will be marked carved and visited once called)
                 self.visit(next_tile_coords)
 
-    def display_grid(self):
-        """Displays the grid, or underlying maze."""
-
-        for y in range(self.height):
-            for x in range(self.width):
-                print(self.grid[x,y], end='') #WALL or PATH
-            print() #newline after each row
-
-        print() #newline after entire grid
-
+class Game_Line:
+    """
+    Helper class for Game.
+    Text is part of most terminal-based games.
+    Game Lines are made up of a script to display and a prompt 
+    for user interaction.
+    """
+    def __init__(self):
+        self.script = ""
+        self.prompt = ""
 
 class Game:
-    """Encapsulates de entire terminal-based user experience.
-    Contrains logic for displaying instructions, handling user input,
-    and displaying the current state of the maze."""
+    """
+    Encapsulates de entire terminal-based user experience.
+    Contains logic for displaying instructions, handling user input,
+    and displaying the current state of the maze after every move.
+    """
     def __init__(self, stdscr):
         
         # Curses setup
@@ -217,7 +201,7 @@ class Game:
     def start(self):
         """Starts a new game with a fresh maze"""
         self.maze = Mystery_Maze(13,7)
-        self.player_position = self.maze.entrance.coords
+        self.player_position = self.maze.entry.coords
         self.player_start_time = time.time() 
         self.play_time = 0
 
@@ -263,7 +247,7 @@ class Game:
         return (is_success, next_position)
 
     def __play_intro(self):
-        line0, line1, line2 = Line(), Line(), Line()
+        line0, line1, line2 = Game_Line(), Game_Line(), Game_Line()
         line0.script = """You have entered the Mystery Maze... Welcome.\n...A shroud of fog engulfs you..."""
         line0.prompt = """(Press any key to continue)"""
         line1.script = """As you move, you may step into a clearing. A path forward? A dead end?\nOr... you may step into a wall!"""
@@ -416,7 +400,7 @@ With every move you step towards success."""
     def __display_finish(self):
         play_time_str = str(round(self.play_time,2))
 
-        turn_line = Line()
+        turn_line = Game_Line()
         turn_line.script = f'Congratulations. You made it to the exit in {play_time_str} seconds.'
         turn_line.prompt = "Press any key to play again."
 
@@ -434,7 +418,7 @@ With every move you step towards success."""
         The main game display. Includes instruction, and player position.
         Waits for player turn and updates the game state.
         """
-        turn_line = Line()
+        turn_line = Game_Line()
         turn_line.script = "You have entered the maze. How long will it take to find your way through?"
         turn_line.prompt = "Use the arrow keys to navigate your way through the shrouded maze."
         self.__display_line(turn_line)
@@ -475,30 +459,8 @@ With every move you step towards success."""
         
         self.__display_finish()
 
-            
-
-class Line:
-    """Lines in the game are made up of a script and a prompt."""
-    def __init__(self):
-        self.script = ""
-        self.prompt = ""
-
-# while True:
-#     prompt = """
-#     Use the WASD keys to make your way through the maze.
-#     Press a direction key and then Enter:"""
-#     str_input = input(prompt).lower()
-#     match str_input:
-#         case "w":
-#             maze.step(Direction.NORTH)
-#         case "a":
-#             maze.step(Direction.WEST)
-#         case "s":
-#             maze.step(Direction.SOUTH)
-#         case "d":
-#             maze.step(Direction.EAST)
-#         case _:
-#             print("Not a Valid direction")
-
+def main(stdscr):
+    game = Game(stdscr)
+    game.start()
 
 wrapper(main) #Protects the terminal from breaking
