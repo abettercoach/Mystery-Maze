@@ -204,19 +204,23 @@ class Game:
         
         # Where to draw text and maze elements on the terminal
         self.__text_display_height = 5
-        self.__maze_screen_coords = (10,8)
+        self.__maze_screen_coords = (10,self.__text_display_height)
 
-    def start(self):
+    def start(self, width=17, height=9, intro=True):
         """Starts a new game with a fresh maze"""
         
         # We can modify the maze width and height parameters
         # to play with different sizes.
+        #
+        # Can set custom width and height in the params as well as a 
+        # a bool to toggle playing the text intro or not.
+        # TODO: Implement leveling up every time a game in completed.
         # 
         # CAUTION: curses will break if the terminal window can't 
         # fit the maze and text. The window will need to be resized.
         # I have no interest in diving into making the game responsive
         # and dynamic to the terminal window size. That's beyond scope.
-        self.maze = Mystery_Maze(13,7) 
+        self.maze = Mystery_Maze(width,height) 
 
         # Self-explanatory attributes related to user and play
         self.player_position = self.maze.entry.coords
@@ -226,7 +230,9 @@ class Game:
         # Clear out the terminal entirely between games.
         self.screen.clear()
 
-        self.__play_intro() # Text-based introduction.
+        if intro:
+            self.__play_intro() # Text-based introduction.
+
         self.__game_loop() # Main loop for play.
 
     def __play_intro(self):
@@ -310,7 +316,7 @@ class Game:
 
         # Reset time, so that the count begins only after the intro
         self.start_time = time.time() 
-        self.screen.nodelay(False) # Don't wait at getch(), keep looping
+        self.screen.nodelay(True) # Don't wait at getch(), keep looping
         while True:
             # Update elapsed time
             self.elapsed_time = time.time() - self.start_time
@@ -324,7 +330,8 @@ class Game:
             # is ready and save a bit of computation. This is unlike __display_line()
             self.screen.refresh() 
 
-            # No wait. char == cursers.ERR == -1 if empty buffer
+            # There's no waiting for input. char will be -1 if no input.
+            # char == cursers.ERR == -1 if empty buffer
             # We want to keep looping to display close-to-live elapsed time
             char = self.screen.getch() 
 
@@ -390,7 +397,7 @@ class Game:
         curses.start_color()
         curses.use_default_colors()
 
-        curses.init_color(1, 500, 500, 500) # Gray
+        curses.init_color(1, 200, 200, 200) # Gray
         curses.init_pair(1, 1, curses.COLOR_WHITE) # Gray foreground on white background
 
         if not tile.revealed:
@@ -520,7 +527,7 @@ class Game:
         # Wait for input of any character before we start a new game and intro
         self.screen.nodelay(False)
         self.screen.getch() # Any character will trigger.
-        self.start()
+        self.start(intro=False)
 
 def main(stdscr):
     """Start of script. All logic lies within Game."""

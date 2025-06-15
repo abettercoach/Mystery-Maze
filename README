@@ -28,3 +28,16 @@ through a maze from entry to exit as quickly as possible.
   reveal the Exit tile.
 
 There is no losing, only taking longer.
+
+# Caution & Troubleshooting
+The game will crash if the terminal window is 
+too small (too short) to display the text and maze.
+
+If you get this error:
+`_curses.error: addwstr() returned ERR`
+
+Please make your terminal window larger and try 
+running the program again.
+
+Resolving this issue is not currently in scope 
+for this project.
