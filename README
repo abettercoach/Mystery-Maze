@@ -4,22 +4,23 @@ A small project for the Recurse Center application, June 2025
 Inspired by an activity described in the book
 "Right Kind of Wrong" by Amy Edmondson
  
-# Short Description:
+# Description:
 Small, terminal-based game built on python.
 The goal of the game is for the user to find their way 
 through a maze from entry to exit as quickly as possible. 
 
-# The Game:
-- The maze exists within a grid of tiles.
-- Path tiles are part of the maze.
-- Wall tiles are not.
-- There is an Entry tile and an Exit tile.
-- Except for the Entry, all tiles are at first shrouded, 
-  and the user must step on a tile before revealing if
-  it's a path tile or wall tile.
+- The object of the game is to make your way through the maze.
+- The maze is enconded as grid of tiles.
+- Some tiles are part of the maze path.
+- The rest are wall tiles.
+- There is an entry tile and an exit tile.
+- Except for the entry, all tiles are at first shrouded.
+- The user moves with the arrow keys.
+- With each move, the user must steps on a tile before
+  revealing if it's a path tile or wall tile.
 - The user can only step on tiles neighboring already 
   revealed path tiles. 
-- The user takes steps using the arrow keys.
+- The user moves position if stepped on a path tile.
 - Stepping on a path tile is a success.
 - Stepping on a wall tile is a failure.
 - Some path tiles lead to dead ends.
@@ -27,6 +28,3 @@ through a maze from entry to exit as quickly as possible.
   reveal the Exit tile.
 
 There is no losing, only taking longer.
-
-# The Code:
-
