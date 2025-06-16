@@ -393,22 +393,37 @@ class Game:
     def __display_tile(self, coords, tile):
         """Displays a tile given its current state at given screen coords."""
 
+        (screen_x, screen_y) = coords # Coordinates on terminal screen
+        (tile_x, tile_y) = tile.coords
+        
+
         # Some necessary setup for nice colors
         curses.start_color()
         curses.use_default_colors()
 
-        curses.init_color(1, 200, 200, 200) # Gray
-        curses.init_pair(1, 1, curses.COLOR_WHITE) # Gray foreground on white background
+        curses.init_color(1, 500, 500, 500) # Gray
+        curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_WHITE) # Black fg on white bg
+        curses.init_pair(2, 1, curses.COLOR_BLACK) # Gray fg on black bg
+        curses.init_pair(3, curses.COLOR_WHITE, curses.COLOR_WHITE) # White fg on white bg
 
-        if not tile.revealed:
-            tile_char = "▓" # Shrouded tiles are medium 
+        is_edge = tile_x == 0 or tile_x == self.maze.width - 1 or tile_y == 0 or tile_y == self.maze.height - 1
+        is_entry = tile.coords == self.maze.entry.coords
+        is_exit = tile.coords == self.maze.exit.coords
+
+        if is_edge and not is_entry and not is_exit:
+            # Edge tiles are solid white asterisks
+            self.screen.addstr(screen_y, screen_x, "*", curses.color_pair(1))
+        elif not tile.revealed:
+            # Shrouded tiles are semi opaque gray 
+            self.screen.addstr(screen_y, screen_x, "?", curses.color_pair(2) | curses.A_BOLD)
         elif not tile.path:
-            tile_char = "█" # Revealed walls are darkest
+            # Wall tiles are solid white 
+            self.screen.addstr(screen_y, screen_x, "█", curses.color_pair(3))
         else:
-            tile_char = " " # Revealed path is lightest
+            # Revealed path tiles are blank.
+            self.screen.addstr(screen_y, screen_x, " ", curses.color_pair(2))
         
-        (x,y) = coords # Coordinates on terminal screen
-        self.screen.addstr(y, x, tile_char, curses.color_pair(1)) # Print tile_char at (x,y) with specific color
+        
 
     def __display_user(self):
         """Displays the current state of the user."""
@@ -420,12 +435,12 @@ class Game:
         curses.start_color()
         curses.use_default_colors()
 
-        curses.init_pair(2, curses.COLOR_WHITE, curses.COLOR_BLACK) # White foreground on black background
+        curses.init_pair(4, curses.COLOR_WHITE, curses.COLOR_BLACK) # White foreground on black background
 
-        user_char = "¤" # "You are here"
+        user_char = "§" # "You are here"
 
         (x,y) = (maze_anchor_x + user_x, maze_anchor_y + user_y)
-        self.screen.addstr(y, x, user_char, curses.color_pair(2) | curses.A_BOLD) # A nice bold, too
+        self.screen.addstr(y, x, user_char, curses.color_pair(4) | curses.A_BOLD) # A nice bold, too
 
     def __display_elapsed_time(self):
         """Displays currently elapsed time."""
@@ -503,13 +518,13 @@ class Game:
         curses.start_color()
         curses.use_default_colors()
 
-        curses.init_pair(3, curses.COLOR_WHITE, curses.COLOR_RED) # White fg, red bg. NOTE: Red not working locally
-        curses.init_pair(4, curses.COLOR_WHITE, curses.COLOR_GREEN) # White fg, green bg.
+        curses.init_pair(5, curses.COLOR_WHITE, curses.COLOR_RED) # White fg, red bg. NOTE: Red not working locally
+        curses.init_pair(6, curses.COLOR_WHITE, curses.COLOR_GREEN) # White fg, green bg.
 
         # Green for success. Red for failure.
-        color_pair = curses.color_pair(4) if success else curses.color_pair(3)
+        color_pair = curses.color_pair(6) if success else curses.color_pair(5)
         
-        self.screen.addstr(y,x, user_char, color_pair | curses.A_BOLD) # Let's do bold, too.
+        self.screen.addstr(y, x, user_char, color_pair | curses.A_BOLD) # Let's do bold, too.
 
     def __display_finish(self):
         """Displays the game finished screen."""
