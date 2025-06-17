@@ -29,15 +29,24 @@ through a maze from entry to exit as quickly as possible.
 
 There is no losing, only taking longer.
 
+# TODO: Document new leveling-up feature
+
 # Caution & Troubleshooting
 The game will crash if the terminal window is 
 too small (too short) to display the text and maze.
 
+This should not happen on it's own. The game attempts
+to ensure the maze is small enough to render.
+
+The error should only happen if the user resizes the terminal
+to make it smaller when the game has already started to run
+and after already calculating maximum maze size.
+
 If you get this error:
 `_curses.error: addwstr() returned ERR`
 
-Please make your terminal window larger and try 
-running the program again.
+Please make your terminal window is larger, don't 
+make it smaller, and try running the program again.
 
 Resolving this issue is not currently in scope 
 for this project.

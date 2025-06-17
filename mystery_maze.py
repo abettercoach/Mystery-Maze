@@ -190,17 +190,11 @@ class Game:
     Makes heavy use of the curses library (light wrapper over C's ncruses lib)
     to facilitate creating terminal-based user interfaces.
     """
-    def __init__(self, stdscr):
+    def __init__(self, screen):
         """
         Very little to setup at init. Most is done at start of each game.
-
-        Params: stdscr is an instance of a curses object that is passed to the main function
-        of the script through a wrapper function, which you'll see at end of file.
         """
-
-        # Curses setup
-        curses.curs_set(0) # Hide cursor to keep terminal clean. We never need it.
-        self.screen = stdscr # Human readable attribute for curses object which corresponds to terminal screen.
+        self.screen = screen # curses object which corresponds to terminal screen.
         
         # Where to draw text and maze elements on the terminal
         self.__text_display_height = 5
@@ -208,18 +202,29 @@ class Game:
 
     def start(self, width=17, height=9, intro=True):
         """Starts a new game with a fresh maze"""
+
+        # Ensure the terminal screen is large enough to handle the game.
+        min_screen_w = width + self.__maze_screen_coords[0] + 5
+        min_screen_h = height + self.__maze_screen_coords[1] + 5
+        while True:
+            screen_h, screen_w = self.screen.getmaxyx()
+            if screen_h < min_screen_h or screen_w < min_screen_w:
+                self.screen.clear()
+                self.screen.addstr(0, 0, "Terminal is too small too play. Please resize to make the window larger.")
+                self.screen.getch()
+            else:
+                break
         
+        # CAUTION: This application will break if the terminal window is resized
+        # to a smaller size than can fit the maze and text. The window 
+        # will need to be resized.
+
         # We can modify the maze width and height parameters
         # to play with different sizes.
         #
         # Can set custom width and height in the params as well as a 
         # a bool to toggle playing the text intro or not.
         # TODO: Implement leveling up every time a game in completed.
-        # 
-        # CAUTION: curses will break if the terminal window can't 
-        # fit the maze and text. The window will need to be resized.
-        # I have no interest in diving into making the game responsive
-        # and dynamic to the terminal window size. That's beyond scope.
         self.maze = Mystery_Maze(width,height) 
 
         # Self-explanatory attributes related to user and play
@@ -422,8 +427,6 @@ class Game:
         else:
             # Revealed path tiles are solid black.
             self.screen.addstr(screen_y, screen_x, " ", curses.color_pair(1))
-        
-        
 
     def __display_user(self):
         """Displays the current state of the user."""
@@ -543,14 +546,39 @@ class Game:
         # Wait for input of any character before we start a new game and intro
         self.screen.nodelay(False)
         self.screen.getch() # Any character will trigger.
-        self.start(intro=False)
 
-def main(stdscr):
+        # Level Up! Make the next game harder with a larger maze until it's
+        # as large as the terminal screen can handle.
+        # We make sure we don't make the either the width or height
+        # dimensions too big to crash the program.
+        screen_h, screen_w = self.screen.getmaxyx() 
+        maze_screen_x, maze_screen_y = self.__maze_screen_coords
+        max_maze_w = screen_w - maze_screen_x - 5
+        max_maze_h = screen_h - maze_screen_y - 5
+        new_width = min(self.maze.width + 4, max_maze_w)
+        new_height = min(self.maze.height + 1, max_maze_h)
+
+        self.start(intro=False, width=new_width, height=new_height)
+
+def main():
     """Start of script. All logic lies within the Game class."""
     try:
+        # Curses Setup
+        stdscr = curses.initscr()
+        curses.noecho()
+        curses.cbreak()
+        curses.curs_set(0)
+        stdscr.keypad(True)
+
         game = Game(stdscr)
-        game.start()
+        game.start(width=9, height=5)
     except KeyboardInterrupt:
         pass # Clean program exit on ^C
-     
-curses.wrapper(main) # curses helper function to protect the terminal from breaking
+    finally:
+        curses.echo()
+        curses.nocbreak()
+        stdscr.keypad(False)
+        curses.endwin()
+
+if __name__ == "__main__":
+    main()
