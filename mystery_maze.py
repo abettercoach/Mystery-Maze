@@ -546,8 +546,11 @@ class Game:
         self.start(intro=False)
 
 def main(stdscr):
-    """Start of script. All logic lies within Game."""
-    game = Game(stdscr)
-    game.start()
-
+    """Start of script. All logic lies within the Game class."""
+    try:
+        game = Game(stdscr)
+        game.start()
+    except KeyboardInterrupt:
+        pass # Clean program exit on ^C
+     
 curses.wrapper(main) # curses helper function to protect the terminal from breaking
